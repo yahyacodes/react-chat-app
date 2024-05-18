@@ -6,14 +6,35 @@ import {
   Message,
   MessageInput,
 } from "@chatscope/chat-ui-kit-react";
-import { useState } from "react";
-import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+import { useEffect, useState } from "react";
+import {
+  addDoc,
+  collection,
+  onSnapshot,
+  query,
+  serverTimestamp,
+} from "firebase/firestore";
 import { auth, db } from "../firebase-config";
 import Auth from "./Auth";
 
 const Chat = ({ signUserOut }) => {
   const [messages, setMessages] = useState("");
+  const [getMessages, setGetMessages] = useState([]);
   const messageRef = collection(db, "messages");
+
+  useEffect(() => {
+    const queryMessages = query(messageRef);
+    const unsubssribe = onSnapshot(queryMessages, (snapshot) => {
+      let allMessages = [];
+      snapshot.forEach((doc) => {
+        allMessages.push({ ...doc.data(), id: doc.id });
+      });
+
+      setGetMessages(allMessages);
+    });
+
+    return () => unsubssribe();
+  }, []);
 
   const sendMessage = async (message) => {
     const newMessage = {
@@ -40,10 +61,9 @@ const Chat = ({ signUserOut }) => {
         <MainContainer className="rounded-lg border border-gray-200 shadow-full">
           <ChatContainer>
             <MessageList>
-              {messages &&
-                messages.map((message, index) => {
-                  return <Message key={index} model={message} />;
-                })}
+              {getMessages.map((message, index) => {
+                return <Message key={index} model={message.text} />;
+              })}
             </MessageList>
             <MessageInput
               autoFocus
